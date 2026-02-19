@@ -48,7 +48,7 @@ def send_receipt_email(to_email: str, merchant_id: str, total_huf: int, sale_id:
     subject = f"Your RCPT receipt from {merchant_id}"
 
     # Local link won't open on phone yet (until deployment), but email delivery works now.
-    receipt_url = f"http://127.0.0.1:8000/r/{sale_id}"
+    receipt_url = f"https://rcpt-mvp.onrender.com/r/{sale_id}"
 
     html = f"""
     <div style="font-family: Arial, sans-serif; line-height: 1.4;">
