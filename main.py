@@ -63,7 +63,7 @@ def send_receipt_email(to_email: str, merchant_id: str, total_huf: int, sale_id:
     """
 
     resend.Emails.send({
-        "from": "RCPT <onboarding@resend.dev>",
+        "from": "RCPT Receipts <receipts@rcpt.digital>",
         "to": [to_email],
         "subject": subject,
         "html": html,
