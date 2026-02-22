@@ -143,6 +143,9 @@ BASE_STYLE = """
     background: var(--secondary);
     color: var(--text);
   }
+  a {
+    color: inherit;
+  }
   .actions {
     display: flex;
     flex-wrap: wrap;
@@ -166,6 +169,25 @@ BASE_STYLE = """
     list-style: none;
     margin: 12px 0 0;
     padding: 0;
+  }
+  li.row {
+    display: block;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  li.row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  li.row a {
+    font-weight: 600;
+    text-decoration: none;
+  }
+  li.row a:hover {
+    text-decoration: underline;
+  }
+  li.row small {
+    color: var(--muted);
   }
   @media (max-width: 560px) {
     .card {
@@ -790,17 +812,17 @@ def receipt_page(rid: int):
 # -----------------------------
 @app.get("/v", response_class=HTMLResponse)
 def vault_page():
-    return """
-    <html><body>
+    body = """
+    <section class="card">
       <h1>My RCPT Vault</h1>
-      <p>This Vault is tied to your device (no account).</p>
+      <p class="muted">This Vault is tied to your device (no account).</p>
 
       <div id="out">Loading…</div>
 
-      <p style="margin-top:16px;">
-        <a href="/t/test">Terminal demo (/t/test)</a> |
-        <a href="/m/test">Legacy demo (/m/test)</a>
-      </p>
+      <div class="actions">
+        <a class="btn-secondary" href="/t/test">Terminal demo (/t/test)</a>
+        <a class="btn-secondary" href="/m/test">Legacy demo (/m/test)</a>
+      </div>
 
       <script>
         (async function () {
@@ -810,36 +832,62 @@ def vault_page():
             localStorage.setItem("rcpt_device_id", id);
           }
 
-          const res = await fetch(`/api/vault/${id}`);
-          const data = await res.json();
+          const fmt = (v) => {
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? String(v ?? "") : d.toLocaleString();
+          };
 
-          if (!data.receipts || data.receipts.length === 0) {
-            document.getElementById("out").innerHTML = `
-              <p><b>No receipts yet.</b></p>
-              <p>Try: /pos/test -> Mark paid, then /t/test -> Claim.</p>
-              <p><code>Device ID:</code> ${id}</p>
-            `;
-            return;
-          }
+          try {
+            const res = await fetch(`/api/vault/${id}`);
+            if (!res.ok) {
+              document.getElementById("out").innerHTML = `
+                <p><b>Could not load receipts.</b></p>
+                <p class="muted">Please try again in a moment.</p>
+                <p><code>Device ID:</code> ${id}</p>
+              `;
+              return;
+            }
 
-          const items = data.receipts.map(r => `
-            <li>
+            const data = await res.json();
+
+            const receipts = Array.isArray(data.receipts) ? data.receipts : [];
+
+            if (receipts.length === 0) {
+              document.getElementById("out").innerHTML = `
+                <p><b>No receipts yet.</b></p>
+                <p>Try: /pos/test -> Mark paid, then /t/test -> Claim.</p>
+                <p><code>Device ID:</code> ${id}</p>
+              `;
+              return;
+            }
+
+            const items = receipts.map(r => `
+            <li class="row">
               <a href="/r/${r.id}">Receipt #${r.id}</a>
               — <b>${r.merchant_id}</b>
               — ${r.total_pkr} PKR
-              — <small>${r.when}</small>
+              — <small>${fmt(r.when)}</small>
               ${r.source ? ` — <small>(${r.source})</small>` : ``}
             </li>
           `).join("");
 
           document.getElementById("out").innerHTML = `
             <p><code>Device ID:</code> ${data.device_id}</p>
-            <ul>${items}</ul>
+            <ul class="clean">${items}</ul>
           `;
+          } catch (err) {
+            document.getElementById("out").innerHTML = `
+              <p><b>Could not load receipts.</b></p>
+              <p class="muted">Please check your connection and try again.</p>
+              <p><code>Device ID:</code> ${id}</p>
+              <p class="muted">${String(err)}</p>
+            `;
+          }
         })();
       </script>
-    </body></html>
+    </section>
     """
+    return render_page("My Vault", body)
 
 
 @app.get("/api/vault/{device_id}")
