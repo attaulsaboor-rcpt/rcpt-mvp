@@ -12,6 +12,200 @@ app = FastAPI()
 engine = create_engine("sqlite:///rcpt.db", connect_args={"check_same_thread": False})
 
 
+BASE_STYLE = """
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --line: #e5e5ea;
+    --btn: #111111;
+    --btn-text: #ffffff;
+    --secondary: #f2f2f4;
+    --radius: 16px;
+    --radius-sm: 12px;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+  }
+  h1, h2, h3 {
+    margin: 0 0 10px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  p { margin: 0 0 12px; }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .meta {
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-top: 14px;
+  }
+  .meta p:last-child { margin-bottom: 0; }
+  .muted {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .pill.paid {
+    color: #0f6b2e;
+    background: #ebf9ef;
+    border-color: #cdeed7;
+  }
+  .pill.claimed {
+    color: #0b5394;
+    background: #eaf4ff;
+    border-color: #cddff4;
+  }
+  .pill.draft {
+    color: #6e6e73;
+    background: #f2f2f4;
+    border-color: #e5e5ea;
+  }
+  form { margin-top: 14px; }
+  input[type="email"], input[type="number"], input[type="text"] {
+    width: 100%;
+    margin: 8px 0 12px;
+    padding: 11px 12px;
+    border: 1px solid #d2d2d7;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+  }
+  input[type="email"]:focus, input[type="number"]:focus, input[type="text"]:focus {
+    border-color: #7f7f85;
+    box-shadow: 0 0 0 4px rgba(17, 17, 17, 0.08);
+  }
+  .btn, .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 12px;
+    padding: 11px 15px;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn {
+    background: var(--btn);
+    color: var(--btn-text);
+  }
+  .btn-secondary {
+    background: var(--secondary);
+    color: var(--text);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .amount {
+    font-size: clamp(36px, 7vw, 52px);
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 10px 0 12px;
+  }
+  code {
+    font-size: 12px;
+    background: #f2f2f4;
+    padding: 2px 6px;
+    border-radius: 8px;
+  }
+  ul.clean {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+  }
+  @media (max-width: 560px) {
+    .card {
+      padding: 18px;
+      border-radius: 14px;
+    }
+  }
+</style>
+"""
+
+
+def status_pill(status: str) -> str:
+    normalized = (status or "DRAFT").upper()
+    cls = "draft"
+    if normalized == "PAID":
+        cls = "paid"
+    elif normalized == "CLAIMED":
+        cls = "claimed"
+    return f'<span class="pill {cls}">{normalized}</span>'
+
+
+def render_page(title: str, body_html: str) -> str:
+    return f"""
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{title}</title>
+        {BASE_STYLE}
+      </head>
+      <body>
+        <main class="container">
+          <div class="logo">RCPT</div>
+          {body_html}
+        </main>
+      </body>
+    </html>
+    """
+
+
 def _utcnow() -> str:
     return datetime.utcnow().isoformat()
 
@@ -186,17 +380,18 @@ def send_receipt_email(to_email: str, merchant_id: str, total_pkr: int, receipt_
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return """
-    <html><body>
-      <h1>Hello RCPT</h1>
-      <ul>
-        <li><a href="/m/test">Legacy tap page: /m/test</a></li>
-        <li><a href="/t/test">Terminal tap page: /t/test</a></li>
-        <li><a href="/pos/test">POS page: /pos/test</a></li>
-        <li><a href="/v">Vault: /v</a></li>
-      </ul>
-    </body></html>
+    body = """
+    <section class="card">
+      <h1>RCPT Prototype</h1>
+      <p class="muted">Simple receipt capture and vault access flow.</p>
+      <div class="actions">
+        <a class="btn" href="/pos/test">Open POS Demo</a>
+        <a class="btn-secondary" href="/t/test">Open Terminal Demo</a>
+        <a class="btn-secondary" href="/v">Open Vault</a>
+      </div>
+    </section>
     """
+    return render_page("RCPT", body)
 
 
 # -----------------------------
@@ -204,38 +399,33 @@ def home():
 # -----------------------------
 @app.get("/m/{merchant_id}", response_class=HTMLResponse)
 def tap_page_legacy(merchant_id: str):
-    return f"""
-    <html><body>
-      <h1>RCPT (Legacy Tap)</h1>
-      <p>Merchant: <b>{merchant_id}</b></p>
-
-      <p>
-        Your Vault works with <b>no account</b>. Optional: add email if you also want a copy.
-      </p>
-
+    body = f"""
+    <section class="card">
+      <h1>Legacy Tap</h1>
+      <p class="muted">Merchant: <b>{merchant_id}</b></p>
+      <p>Your Vault works with no account. Add email if you want a copy.</p>
       <form method="post" action="/m/{merchant_id}/claim">
         <input type="hidden" name="device_id" id="device_id" />
         <input type="email" name="email" placeholder="optional@email.com" />
-        <button type="submit">Continue</button>
+        <button class="btn" type="submit">Continue</button>
       </form>
+      <div class="actions">
+        <a class="btn-secondary" href="/v">Open My Vault</a>
+      </div>
+    </section>
 
-      <p style="margin-top:16px;">
-        <a href="/v">Open my Vault</a> |
-        Debug: <a href="/debug/claims">/debug/claims</a>
-      </p>
-
-      <script>
-      (function() {{
-        let id = localStorage.getItem("rcpt_device_id");
-        if (!id) {{
-          id = crypto.randomUUID();
-          localStorage.setItem("rcpt_device_id", id);
-        }}
-        document.getElementById("device_id").value = id;
-      }})();
-      </script>
-    </body></html>
+    <script>
+    (function() {{
+      let id = localStorage.getItem("rcpt_device_id");
+      if (!id) {{
+        id = crypto.randomUUID();
+        localStorage.setItem("rcpt_device_id", id);
+      }}
+      document.getElementById("device_id").value = id;
+    }})();
+    </script>
     """
+    return render_page("Legacy Tap", body)
 
 
 @app.post("/m/{merchant_id}/claim", response_class=HTMLResponse)
@@ -257,16 +447,19 @@ def claim_email_legacy(
             {"m": merchant_id, "e": email, "d": device_id, "t": created_at},
         )
 
-    return f"""
-    <html><body>
+    body = f"""
+    <section class="card">
       <h1>✅ Linked (Legacy)</h1>
-      <p>Merchant: <b>{merchant_id}</b></p>
+      <p class="muted">Merchant: <b>{merchant_id}</b></p>
       <p>Device ID: <code>{device_id}</code></p>
       <p>Email copy: <b>{email if email else "(none)"}</b></p>
-      <p><a href="/v">Open my Vault</a></p>
-      <p><a href="/pos/{merchant_id}">Go to POS</a></p>
-    </body></html>
+      <div class="actions">
+        <a class="btn" href="/v">Open my Vault</a>
+        <a class="btn-secondary" href="/pos/{merchant_id}">Go to POS</a>
+      </div>
+    </section>
     """
+    return render_page("Linked", body)
 
 
 # -----------------------------
@@ -274,37 +467,35 @@ def claim_email_legacy(
 # -----------------------------
 @app.get("/t/{terminal_id}", response_class=HTMLResponse)
 def terminal_tap_page(terminal_id: str):
-    return f"""
-    <html><body>
-      <h1>RCPT (Terminal Tap)</h1>
-      <p>Terminal: <b>{terminal_id}</b></p>
-
-      <p>
-        This is the Phase 3 flow: POS creates a PAID receipt first, then you tap to claim it into your Vault.
-      </p>
+    body = f"""
+    <section class="card">
+      <h1>Terminal Tap</h1>
+      <p class="muted">Terminal: <b>{terminal_id}</b></p>
+      <p>POS creates a paid receipt first, then tap here to claim it into your Vault.</p>
 
       <form method="post" action="/t/{terminal_id}/claim">
         <input type="hidden" name="device_id" id="device_id" />
         <input type="email" name="email" placeholder="optional@email.com" />
-        <button type="submit">Claim latest paid receipt</button>
+        <button class="btn" type="submit">Claim receipt</button>
       </form>
 
-      <p style="margin-top:16px;">
-        <a href="/v">Open my Vault</a>
-      </p>
+      <div class="actions">
+        <a class="btn-secondary" href="/v">Open My Vault</a>
+      </div>
+    </section>
 
-      <script>
-      (function() {{
-        let id = localStorage.getItem("rcpt_device_id");
-        if (!id) {{
-          id = crypto.randomUUID();
-          localStorage.setItem("rcpt_device_id", id);
-        }}
-        document.getElementById("device_id").value = id;
-      }})();
-      </script>
-    </body></html>
+    <script>
+    (function() {{
+      let id = localStorage.getItem("rcpt_device_id");
+      if (!id) {{
+        id = crypto.randomUUID();
+        localStorage.setItem("rcpt_device_id", id);
+      }}
+      document.getElementById("device_id").value = id;
+    }})();
+    </script>
     """
+    return render_page("Terminal Tap", body)
 
 
 @app.post("/t/{terminal_id}/claim", response_class=HTMLResponse)
@@ -333,13 +524,16 @@ def terminal_claim_latest_receipt(
         ).fetchone()
 
         if not receipt:
-            return """
-            <html><body>
-              <h1>No new paid receipt to claim</h1>
-              <p>Ask the merchant to mark a receipt as paid in the POS first.</p>
-              <p><a href="/v">Open my Vault</a></p>
-            </body></html>
+            body = """
+            <section class="card">
+              <h1>No New Paid Receipt</h1>
+              <p>Ask the merchant to mark a receipt as paid in POS first.</p>
+              <div class="actions">
+                <a class="btn-secondary" href="/v">Open My Vault</a>
+              </div>
+            </section>
             """
+            return render_page("Claim", body)
 
         # Atomic claim: only succeeds if still unclaimed
         updated = conn.execute(
@@ -363,13 +557,16 @@ def terminal_claim_latest_receipt(
         )
 
         if updated.rowcount != 1:
-            return """
-            <html><body>
-              <h1>No new paid receipt to claim</h1>
-              <p>Someone already claimed it (or it changed). Try again after a new payment.</p>
-              <p><a href="/v">Open my Vault</a></p>
-            </body></html>
+            body = """
+            <section class="card">
+              <h1>No New Paid Receipt</h1>
+              <p>Someone already claimed it. Try again after a new payment.</p>
+              <div class="actions">
+                <a class="btn-secondary" href="/v">Open My Vault</a>
+              </div>
+            </section>
             """
+            return render_page("Claim", body)
 
     # Optional email send AFTER successful claim (Phase 3 behavior)
     email_status = ""
@@ -385,15 +582,18 @@ def terminal_claim_latest_receipt(
         except Exception as e:
             email_status = f"<p>⚠️ Email failed: {e}</p>"
 
-    return f"""
-    <html><body>
+    body = f"""
+    <section class="card">
       <h1>✅ Claimed</h1>
-      <p>Receipt ID: <b>{receipt.id}</b></p>
-      <p><a href="/r/{receipt.id}">Open receipt</a></p>
-      <p><a href="/v">Open my Vault</a></p>
+      <p class="muted">Receipt ID: <b>{receipt.id}</b></p>
       {email_status}
-    </body></html>
+      <div class="actions">
+        <a class="btn" href="/r/{receipt.id}">Open receipt</a>
+        <a class="btn-secondary" href="/v">Open my Vault</a>
+      </div>
+    </section>
     """
+    return render_page("Claimed", body)
 
 
 # -----------------------------
@@ -401,23 +601,24 @@ def terminal_claim_latest_receipt(
 # -----------------------------
 @app.get("/pos/{merchant_id}", response_class=HTMLResponse)
 def pos_screen(merchant_id: str):
-    return f"""
-    <html><body>
+    body = f"""
+    <section class="card">
       <h1>Simulated POS</h1>
-      <p>Merchant/Terminal: <b>{merchant_id}</b></p>
+      <p class="muted">Merchant/Terminal: <b>{merchant_id}</b></p>
 
       <form method="post" action="/pos/{merchant_id}/paid">
         <label>Total (PKR): </label>
         <input type="number" name="total_pkr" value="1990" min="0" required />
-        <button type="submit">Mark Paid</button>
+        <button class="btn" type="submit">Mark Paid</button>
       </form>
 
-      <p style="margin-top:16px;">
-        <a href="/t/{merchant_id}">Go to terminal tap (/t/{merchant_id})</a><br/>
-        Debug: <a href="/debug/claims">claims</a>
-      </p>
-    </body></html>
+      <div class="actions">
+        <a class="btn-secondary" href="/t/{merchant_id}">Go to terminal tap (/t/{merchant_id})</a>
+        <a class="btn-secondary" href="/debug/claims">claims</a>
+      </div>
+    </section>
     """
+    return render_page("Simulated POS", body)
 
 
 @app.post("/pos/{merchant_id}/paid", response_class=HTMLResponse)
@@ -491,17 +692,20 @@ def pos_paid(merchant_id: str, total_pkr: int = Form(...)):
     if claim and claim.email:
         email_hint = "<p>ℹ️ Legacy claim exists, but Phase 3 email is sent on /t/... claim.</p>"
 
-    return f"""
-    <html><body>
+    body = f"""
+    <section class="card">
       <h1>✅ Paid recorded</h1>
-      <p>Receipt ID: <b>{receipt_id}</b></p>
+      <p class="muted">Receipt ID: <b>{receipt_id}</b></p>
       {email_hint}
-      <p><a href="/r/{receipt_id}">View receipt</a></p>
-      <p><a href="/t/{merchant_id}">Customer tap to claim (/t/{merchant_id})</a></p>
-      <p><a href="/v">Open Vault</a></p>
-      <p><a href="/pos/{merchant_id}">Back to POS</a></p>
-    </body></html>
+      <div class="actions">
+        <a class="btn" href="/r/{receipt_id}">View receipt</a>
+        <a class="btn-secondary" href="/t/{merchant_id}">Customer tap to claim (/t/{merchant_id})</a>
+        <a class="btn-secondary" href="/v">Open Vault</a>
+        <a class="btn-secondary" href="/pos/{merchant_id}">Back to POS</a>
+      </div>
+    </section>
     """
+    return render_page("Paid recorded", body)
 
 
 # -----------------------------
