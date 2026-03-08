@@ -1,0 +1,137 @@
+﻿{
+  "terminal_id": "terminal-001",
+  "source_file": "00064.SPL",
+  "captured_at_utc": "2026-03-08T17:22:06Z",
+  "receipt": {
+    "merchant": "SUPERMART \u0026 CO.",
+    "date": "2026-03-08 22:30",
+    "cashier": "Sarah",
+    "paymentMethod": "Credit Card",
+    "subtotal": 114.59,
+    "discount": -5.00,
+    "tax": 8.76,
+    "total": 118.35,
+    "items": [
+      {
+        "name": "Organic Apples (1kg)",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 4.50
+      },
+      {
+        "name": "Whole Milk (1L)",
+        "qty": 2,
+        "unitPrice": null,
+        "linePrice": 3.20
+      },
+      {
+        "name": "Sourdough Bread",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 5.00
+      },
+      {
+        "name": "Avocados",
+        "qty": 3,
+        "unitPrice": null,
+        "linePrice": 6.00
+      },
+      {
+        "name": "Free Range Eggs (12)",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 4.80
+      },
+      {
+        "name": "Butter (250g)",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 3.50
+      },
+      {
+        "name": "Greek Yogurt",
+        "qty": 2,
+        "unitPrice": null,
+        "linePrice": 2.50
+      },
+      {
+        "name": "Ground Coffee",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 8.99
+      },
+      {
+        "name": "Orange Juice",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 4.50
+      },
+      {
+        "name": "Bananas",
+        "qty": 5,
+        "unitPrice": null,
+        "linePrice": 1.50
+      },
+      {
+        "name": "Chicken Breast",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 12.40
+      },
+      {
+        "name": "Olive Oil",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 14.00
+      },
+      {
+        "name": "Sea Salt",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 2.20
+      },
+      {
+        "name": "Sparkling Water",
+        "qty": 4,
+        "unitPrice": null,
+        "linePrice": 4.00
+      },
+      {
+        "name": "Dish Soap",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 3.80
+      },
+      {
+        "name": "Paper Towels",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 6.50
+      },
+      {
+        "name": "Dark Chocolate",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 3.50
+      },
+      {
+        "name": "Green Tea",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 4.20
+      },
+      {
+        "name": "Hand Soap",
+        "qty": 2,
+        "unitPrice": null,
+        "linePrice": 5.00
+      },
+      {
+        "name": "Laundry Detergent",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 14.50
+      }
+    ]
+  }
+}

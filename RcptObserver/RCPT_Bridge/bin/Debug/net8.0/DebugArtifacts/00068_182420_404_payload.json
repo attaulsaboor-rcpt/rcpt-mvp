@@ -1,0 +1,107 @@
+﻿{
+  "terminal_id": "terminal-001",
+  "source_file": "00068.SPL",
+  "captured_at_utc": "2026-03-08T17:24:20Z",
+  "receipt": {
+    "merchant": "RCPT GROCERY MART",
+    "date": "2026-03-08 18:24",
+    "cashier": "Register 3",
+    "paymentMethod": null,
+    "subtotal": 29.85,
+    "discount": -2.98,
+    "tax": 2.15,
+    "total": 29.02,
+    "items": [
+      {
+        "name": "Item 1",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 2",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 3",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 4",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 5",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 6",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 7",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 8",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 9",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 10",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 11",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 12",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 13",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 14",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      },
+      {
+        "name": "Item 15",
+        "qty": null,
+        "unitPrice": null,
+        "linePrice": 1.99
+      }
+    ]
+  }
+}

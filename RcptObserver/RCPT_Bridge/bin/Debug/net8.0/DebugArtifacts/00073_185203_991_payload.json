@@ -1,0 +1,36 @@
+﻿{
+  "idempotency_key": "f45eb319fdb05eb2726eaba725b496956f2307504ed373ab67ad447604474b12",
+  "terminal_id": "terminal-001",
+  "source_file": "00073.SPL",
+  "captured_at_utc": "2026-03-08T17:52:03Z",
+  "receipt": {
+    "merchant": "RCPT CAFE \u0026 BAKERY",
+    "date": null,
+    "cashier": null,
+    "paymentMethod": "Credit Card",
+    "subtotal": 15.25,
+    "discount": null,
+    "tax": 1.22,
+    "total": 16.47,
+    "items": [
+      {
+        "name": "Latte",
+        "qty": 2,
+        "unitPrice": null,
+        "linePrice": 9.00
+      },
+      {
+        "name": "Croissant",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 3.50
+      },
+      {
+        "name": "Muffin",
+        "qty": 1,
+        "unitPrice": null,
+        "linePrice": 2.75
+      }
+    ]
+  }
+}

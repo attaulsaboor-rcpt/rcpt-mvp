@@ -1,0 +1,47 @@
+Timestamp,PrinterName,JobId,JobName,Event,Status,ObservedLifetimeMs
+2026-03-07 19:59:10.205,"RCPT Test Printer",4,"Print System Document","New Job Detected","Printed",0
+2026-03-07 19:59:10.205,"RCPT Test Printer",5,"Print System Document","New Job Detected","Printed",0
+2026-03-07 19:59:57.064,"RCPT Test Printer",6,"Print System Document","New Job Detected","Printed",0
+2026-03-07 19:59:59.609,"RCPT Test Printer",7,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:01.495,"RCPT Test Printer",8,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:03.394,"RCPT Test Printer",9,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:04.877,"RCPT Test Printer",10,"Print System Document","New Job Detected","None",0
+2026-03-07 20:00:05.092,"RCPT Test Printer",10,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:00:06.556,"RCPT Test Printer",11,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:08.228,"RCPT Test Printer",12,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:09.717,"RCPT Test Printer",13,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:10.978,"RCPT Test Printer",14,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:12.432,"RCPT Test Printer",15,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:13.683,"RCPT Test Printer",16,"Print System Document","New Job Detected","Printing, Retained",0
+2026-03-07 20:00:13.886,"RCPT Test Printer",16,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:00:15.134,"RCPT Test Printer",17,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:00:16.387,"RCPT Test Printer",18,"Print System Document","New Job Detected","Spooling",0
+2026-03-07 20:00:16.605,"RCPT Test Printer",18,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:00:17.858,"RCPT Test Printer",19,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",4,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",5,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",6,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",7,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",8,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",9,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",10,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",11,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",12,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",13,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",14,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",15,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",16,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",17,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",18,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:06:33.100,"RCPT Test Printer",19,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:07:23.400,"RCPT Test Printer",20,"Print System Document","New Job Detected","Printing, Retained",0
+2026-03-07 20:07:23.462,"RCPT Test Printer",20,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:07:25.387,"RCPT Test Printer",21,"Print System Document","New Job Detected","Printed",0
+2026-03-07 20:07:27.175,"RCPT Test Printer",22,"Print System Document","New Job Detected","Spooling",0
+2026-03-07 20:07:27.235,"RCPT Test Printer",22,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:07:28.773,"RCPT Test Printer",23,"Print System Document","New Job Detected","Spooling",0
+2026-03-07 20:07:28.835,"RCPT Test Printer",23,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:07:30.816,"RCPT Test Printer",24,"Print System Document","New Job Detected","Spooling",0
+2026-03-07 20:07:30.871,"RCPT Test Printer",24,"Print System Document","Status Changed","Printed",0
+2026-03-07 20:07:32.662,"RCPT Test Printer",25,"Print System Document","New Job Detected","Spooling",0
+2026-03-07 20:07:32.724,"RCPT Test Printer",25,"Print System Document","Status Changed","Printed",0

@@ -1,0 +1,14 @@
+C:\Users\attau\RcptObserver\RcptReceiptSender\bin\Debug\net8.0-windows\RcptReceiptSender.exe
+C:\Users\attau\RcptObserver\RcptReceiptSender\bin\Debug\net8.0-windows\RcptReceiptSender.deps.json
+C:\Users\attau\RcptObserver\RcptReceiptSender\bin\Debug\net8.0-windows\RcptReceiptSender.runtimeconfig.json
+C:\Users\attau\RcptObserver\RcptReceiptSender\bin\Debug\net8.0-windows\RcptReceiptSender.dll
+C:\Users\attau\RcptObserver\RcptReceiptSender\bin\Debug\net8.0-windows\RcptReceiptSender.pdb
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.AssemblyInfoInputs.cache
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.AssemblyInfo.cs
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.csproj.CoreCompileInputs.cache
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.dll
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\refint\RcptReceiptSender.dll
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.pdb
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\RcptReceiptSender.genruntimeconfig.cache
+C:\Users\attau\RcptObserver\RcptReceiptSender\obj\Debug\net8.0-windows\ref\RcptReceiptSender.dll

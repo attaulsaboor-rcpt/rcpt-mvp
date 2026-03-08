@@ -1,0 +1,14 @@
+C:\Users\attau\RcptObserver\RcptRawInjector\bin\Debug\net8.0\RcptRawInjector.exe
+C:\Users\attau\RcptObserver\RcptRawInjector\bin\Debug\net8.0\RcptRawInjector.deps.json
+C:\Users\attau\RcptObserver\RcptRawInjector\bin\Debug\net8.0\RcptRawInjector.runtimeconfig.json
+C:\Users\attau\RcptObserver\RcptRawInjector\bin\Debug\net8.0\RcptRawInjector.dll
+C:\Users\attau\RcptObserver\RcptRawInjector\bin\Debug\net8.0\RcptRawInjector.pdb
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.AssemblyInfoInputs.cache
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.AssemblyInfo.cs
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.csproj.CoreCompileInputs.cache
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.dll
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\refint\RcptRawInjector.dll
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.pdb
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\RcptRawInjector.genruntimeconfig.cache
+C:\Users\attau\RcptObserver\RcptRawInjector\obj\Debug\net8.0\ref\RcptRawInjector.dll

@@ -1,0 +1,6 @@
+Timestamp,PrinterName,JobId,JobName,Submitter,Size(Bytes),Status,Transition
+2026-03-07 19:22:55.306,RCPT Test Printer,3,"Print System Document",attau,908,Printing, Retained,New Job Detected
+2026-03-07 19:22:55.535,RCPT Test Printer,3,N/A,N/A,0,Deleted,Removed From Queue
+2026-03-07 19:25:28.961,RCPT Test Printer,4,"Print System Document",attau,980,Printing, Retained,New Job Detected
+2026-03-07 19:25:29.174,RCPT Test Printer,4,"Print System Document",attau,65536,Printed,Status Changed
+2026-03-07 19:29:08.407,RCPT Test Printer,5,"Print System Document",attau,93,Printed,New Job Detected

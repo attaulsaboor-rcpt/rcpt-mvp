@@ -1,0 +1,28 @@
+RCPT GROCERY MART
+Store #004 - Main Campus
+Date: 2026-03-08 03:03
+Cashier: Register 3
+--------------------------------
+Item 1                    1.99
+Item 2                    1.99
+Item 3                    1.99
+Item 4                    1.99
+Item 5                    1.99
+Item 6                    1.99
+Item 7                    1.99
+Item 8                    1.99
+Item 9                    1.99
+Item 10                   1.99
+Item 11                   1.99
+Item 12                   1.99
+Item 13                   1.99
+Item 14                   1.99
+Item 15                   1.99
+--------------------------------
+Subtotal                   29.85
+Student Discount          - 2.98
+Tax                         2.15
+TOTAL                      29.02
+--------------------------------
+Thank you for shopping with us!
+Please come again.
