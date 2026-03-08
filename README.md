@@ -1,12 +1,74 @@
-\# RCPT MVP
+\# RCPT
 
 
 
-Prototype infrastructure for intercepting POS receipts and converting them into digital receipts.
+Digital receipt infrastructure for physical retail.
 
 
 
-The system captures printed receipts directly from the Windows print spooler, parses them, and forwards them to a backend service where customers can claim them into a digital receipt vault.
+RCPT allows customers to \*\*tap their phone after paying and instantly receive a digital receipt\*\* stored in a personal receipt vault.
+
+
+
+The system captures printed receipts directly from the POS printing pipeline and converts them into structured digital receipts.
+
+
+
+Live prototype:
+
+
+
+https://rcpt.digital
+
+
+
+---
+
+
+
+\# What RCPT Does (15-Second Explanation)
+
+
+
+Today most receipts are still printed on thermal paper.
+
+
+
+RCPT replaces that experience with a \*\*tap-to-receive digital receipt\*\*.
+
+
+
+Customer flow:
+
+
+
+```
+
+Customer pays
+
+&nbsp;     ↓
+
+Receipt prints
+
+&nbsp;     ↓
+
+Customer taps NFC tag
+
+&nbsp;     ↓
+
+Receipt appears in their digital vault
+
+```
+
+
+
+No apps required.
+
+No POS integration required.
+
+
+
+The system works by \*\*intercepting receipt data before it reaches the printer\*\*.
 
 
 
@@ -22,23 +84,23 @@ The system captures printed receipts directly from the Windows print spooler, pa
 
 POS Printer
 
-&nbsp;   ↓
+&nbsp;    ↓
 
 Windows Print Spool
 
-&nbsp;   ↓
+&nbsp;    ↓
 
 RCPT Bridge (C# Observer)
 
-&nbsp;   ↓
+&nbsp;    ↓
 
 Receipt Parser
 
-&nbsp;   ↓
+&nbsp;    ↓
 
 FastAPI Backend
 
-&nbsp;   ↓
+&nbsp;    ↓
 
 Receipt Vault
 
@@ -52,17 +114,17 @@ Receipt Vault
 
 1\. A POS system prints a receipt.
 
-2\. The Windows print spooler writes the receipt job to disk.
+2\. The Windows print spooler writes the print job.
 
-3\. \*\*RCPT Bridge\*\* detects the new spool file.
+3\. \*\*RCPT Bridge\*\* detects the spool file.
 
-4\. The bridge parses the receipt data.
+4\. The receipt data is parsed and structured.
 
 5\. Parsed receipt JSON is sent to the backend API.
 
 6\. The backend stores the receipt.
 
-7\. Customers can tap an NFC tag to claim the receipt into their vault.
+7\. Customers can tap an NFC tag to claim the receipt.
 
 
 
@@ -86,7 +148,7 @@ FastAPI service responsible for:
 
 \* idempotent storage
 
-\* device-based vault
+\* device-based receipt vault
 
 \* receipt claim flow
 
@@ -168,7 +230,7 @@ Technologies:
 
 \* .NET 8
 
-\* Windows print spool monitoring
+\* Windows spool monitoring
 
 
 
@@ -184,25 +246,157 @@ The parser extracts structured data from raw receipt text.
 
 
 
-Fields extracted:
+Fields extracted include:
 
 
 
 \* merchant name
 
-\* date
+\* purchase date
 
-\* items
+\* line items
 
 \* totals
 
-\* tax (if present)
+\* tax
 
-\* payment method (if present)
+\* payment method (if available)
 
 
 
 The parsed receipt is converted into structured JSON before being sent to the backend.
+
+
+
+---
+
+
+
+\# Infrastructure
+
+
+
+The RCPT MVP uses the following infrastructure:
+
+
+
+\### Backend Hosting
+
+
+
+Hosted on:
+
+
+
+Render
+
+
+
+The FastAPI backend is deployed as a web service.
+
+
+
+---
+
+
+
+\### Email Delivery
+
+
+
+Transactional emails are handled using:
+
+
+
+Resend
+
+
+
+Used for:
+
+
+
+\* sending digital receipts
+
+\* receipt sharing
+
+\* device verification emails
+
+
+
+---
+
+
+
+\### Domain
+
+
+
+Prototype domain:
+
+
+
+https://rcpt.digital
+
+
+
+---
+
+
+
+\# API Overview
+
+
+
+Key backend endpoints include:
+
+
+
+```
+
+POST /api/bridge/receipt
+
+```
+
+
+
+Receives parsed receipts from the RCPT Bridge.
+
+
+
+```
+
+GET /t/{terminal\_id}
+
+```
+
+
+
+Customer tap page used to claim the most recent receipt.
+
+
+
+```
+
+POST /claim
+
+```
+
+
+
+Associates a receipt with a device vault.
+
+
+
+```
+
+GET /vault
+
+```
+
+
+
+Displays stored receipts for a device.
 
 
 
@@ -230,7 +424,7 @@ uvicorn main:app --reload
 
 
 
-The API will run locally on:
+Server runs at:
 
 
 
@@ -250,7 +444,7 @@ http://127.0.0.1:8000
 
 
 
-Navigate to the observer directory and start the daemon:
+Navigate to the observer directory:
 
 
 
@@ -264,7 +458,7 @@ dotnet run
 
 
 
-The bridge will begin watching the Windows spool directory and forwarding receipts to the backend.
+The bridge will begin watching the Windows spool directory and forwarding receipts.
 
 
 
@@ -330,9 +524,9 @@ The current prototype supports:
 
 \* idempotent receipt storage
 
-\* NFC tap-based receipt claiming
-
 \* device-linked receipt vault
+
+\* NFC tap-based receipt claiming
 
 
 
@@ -344,21 +538,21 @@ The current prototype supports:
 
 
 
-Planned improvements include:
+Planned improvements:
 
 
 
-\* bridge offline queue (store \& forward)
+\* offline bridge queue (store \& forward)
 
-\* receipt deduplication using idempotency keys
+\* receipt deduplication via idempotency keys
 
 \* multi-terminal printer support
 
-\* improved receipt parsing templates
+\* merchant-specific parsing templates
 
-\* LLM fallback parsing for unknown receipt formats
+\* LLM fallback parsing for unknown receipt layouts
 
-\* production deployment pipeline
+\* production-grade observability
 
 
 
@@ -370,7 +564,7 @@ Planned improvements include:
 
 
 
-This repository represents the \*\*early infrastructure prototype\*\* for the RCPT digital receipt system.
+This repository represents the \*\*initial infrastructure prototype\*\* for the RCPT digital receipt system.
 
 
 
@@ -386,7 +580,7 @@ Printer → Bridge → API → Vault → Customer Claim
 
 
 
-Once the pipeline is fully stable, the next phase will focus on reliability and scaling.
+Once stable, the next phase will focus on reliability and scaling.
 
 
 
