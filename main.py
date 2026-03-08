@@ -849,7 +849,7 @@ def receipt_page(rid: int):
             text(
                 """
                 SELECT id, terminal_id, merchant_id, total_cents, currency, status, created_at,
-                       paid_at, claimed_at, claimed_by_device_id, email
+                       paid_at, claimed_at, claimed_by_device_id, email, items_json
                 FROM receipts
                 WHERE id = :id
                 """
@@ -872,48 +872,130 @@ def receipt_page(rid: int):
             ).fetchone()
 
     if not receipt and not sale:
-        return "<h1>Receipt not found</h1>"
+        return render_page(
+            "Not Found",
+            """
+            <section class="card">
+              <h1>Receipt not found</h1>
+              <p class="muted">The requested receipt could not be found or has been removed.</p>
+              <div class="actions">
+                <a class="btn-secondary" href="/v">Back to Vault</a>
+              </div>
+            </section>
+            """
+        )
 
     if receipt:
-        total_pkr = receipt.total_cents // 100
+        total_pkr = receipt.total_cents / 100.0
         currency = (receipt.currency or "PKR").upper()
         device_id = receipt.claimed_by_device_id or ""
         email = receipt.email or ""
         merchant = receipt.merchant_id or receipt.terminal_id or "unknown"
+        
+        structured_html = ""
+        if receipt.items_json:
+            try:
+                data = json.loads(receipt.items_json)
+                
+                # Metadata (date, cashier, payment method)
+                meta_rows = ""
+                if data.get("date"):
+                    meta_rows += f"<li class='row'><small>Receipt Date</small> <span>{data['date']}</span></li>"
+                if data.get("cashier"):
+                    meta_rows += f"<li class='row'><small>Cashier</small> <span>{data['cashier']}</span></li>"
+                if data.get("paymentMethod"):
+                    meta_rows += f"<li class='row'><small>Payment Method</small> <span>{data['paymentMethod']}</span></li>"
+                
+                if meta_rows:
+                    meta_rows = f"<ul class='clean meta' style='margin-bottom: 20px;'>{meta_rows}</ul>"
+                
+                # Item rows
+                items_html = ""
+                items = data.get("items", [])
+                if items:
+                    items_html += "<h3>Items</h3><ul class='clean' style='margin-bottom: 20px;'>"
+                    for item in items:
+                        qty = f"{item.get('qty')}x " if item.get('qty') else ""
+                        name = item.get("name", "Unknown Item")
+                        price_val = item.get("linePrice")
+                        price_str = f" — {float(price_val):.2f} {currency}" if price_val is not None else ""
+                        items_html += f"<li class='row'><span>{qty}<b>{name}</b></span> <small>{price_str}</small></li>"
+                    items_html += "</ul>"
+                
+                # Totals
+                totals_html = ""
+                if data.get("subtotal") is not None:
+                    totals_html += f"<li class='row'><small>Subtotal</small> <span>{float(data['subtotal']):.2f} {currency}</span></li>"
+                if data.get("discount") is not None:
+                    totals_html += f"<li class='row'><small>Discount</small> <span>{float(data['discount']):.2f} {currency}</span></li>"
+                if data.get("tax") is not None:
+                    totals_html += f"<li class='row'><small>Tax</small> <span>{float(data['tax']):.2f} {currency}</span></li>"
+                
+                if totals_html:
+                    totals_html = f"<ul class='clean meta' style='margin-bottom: 20px;'>{totals_html}</ul>"
+                
+                structured_html = f"{meta_rows}{items_html}{totals_html}"
+            except Exception:
+                structured_html = "<div class='meta' style='margin-bottom: 20px;'><p class='muted'><i>Structured receipt details unavailable.</i></p></div>"
 
-        return f"""
-        <html><body>
-          <h1>RCPT Receipt (Phase 3)</h1>
-          <p><b>Receipt ID:</b> {receipt.id}</p>
-          <p><b>Merchant/Terminal:</b> {merchant}</p>
-          <p><b>Status:</b> {receipt.status}</p>
-          <p><b>Total:</b> {total_pkr} {currency}</p>
-          <p><b>Created (UTC):</b> {receipt.created_at}</p>
-          <p><b>Paid at (UTC):</b> {receipt.paid_at or "(n/a)"}</p>
-          <p><b>Claimed at (UTC):</b> {receipt.claimed_at or "(not claimed yet)"}</p>
-          <hr/>
-          <p><b>Vault Device ID:</b> <code>{device_id}</code></p>
-          <p><b>Email copy:</b> {email if email else "(none)"}</p>
-          <p><a href="/v">Back to Vault</a></p>
-        </body></html>
+        body = f"""
+        <section class="card">
+          <div class="row" style="border-bottom: none; padding-bottom: 0;">
+            <div class="muted">Receipt #{receipt.id}</div>
+            {status_pill(receipt.status)}
+          </div>
+          
+          <h1 style="margin-top: 8px;">{merchant}</h1>
+          <div class="amount">{total_pkr:.2f} <span style="font-size: 0.4em; color: var(--muted); vertical-align: middle;">{currency}</span></div>
+
+          {structured_html}
+
+          <h3>System Log</h3>
+          <ul class="clean meta">
+            <li class="row"><small>Created (UTC)</small> <span>{receipt.created_at}</span></li>
+            <li class="row"><small>Paid at (UTC)</small> <span>{receipt.paid_at or "(n/a)"}</span></li>
+            <li class="row"><small>Claimed at (UTC)</small> <span>{receipt.claimed_at or "(not claimed yet)"}</span></li>
+          </ul>
+
+          <div class="meta">
+            <p><small>Vault Device ID:</small><br/><code>{device_id or "Unclaimed"}</code></p>
+            <p><small>Email copy:</small><br/><b>{email if email else "(none)"}</b></p>
+          </div>
+
+          <div class="actions" style="margin-top: 24px;">
+            <a class="btn-secondary" href="/v">Back to Vault</a>
+          </div>
+        </section>
         """
+        return render_page(f"Receipt #{receipt.id}", body)
 
-    # Legacy sale
-    total_pkr = sale.total_cents // 100
-    return f"""
-    <html><body>
-      <h1>RCPT Receipt (Legacy)</h1>
-      <p><b>Receipt ID:</b> {sale.id}</p>
-      <p><b>Merchant:</b> {sale.merchant_id}</p>
-      <p><b>Status:</b> {sale.status}</p>
-      <p><b>Total:</b> {total_pkr} PKR</p>
-      <p><b>Date (UTC):</b> {sale.created_at}</p>
-      <hr/>
-      <p><b>Vault Device ID:</b> <code>{sale.device_id or ""}</code></p>
-      <p><b>Email copy:</b> {sale.email if sale.email else "(none)"}</p>
-      <p><a href="/v">Back to Vault</a></p>
-    </body></html>
+    # Legacy sale formatting
+    total_pkr = sale.total_cents / 100.0
+    body = f"""
+    <section class="card">
+      <div class="row" style="border-bottom: none; padding-bottom: 0;">
+        <div class="muted">Legacy Receipt #{sale.id}</div>
+        {status_pill(sale.status)}
+      </div>
+      
+      <h1 style="margin-top: 8px;">{sale.merchant_id}</h1>
+      <div class="amount">{total_pkr:.2f} <span style="font-size: 0.4em; color: var(--muted); vertical-align: middle;">PKR</span></div>
+
+      <ul class="clean meta">
+        <li class="row"><small>Created (UTC)</small> <span>{sale.created_at}</span></li>
+      </ul>
+
+      <div class="meta">
+        <p><small>Vault Device ID:</small><br/><code>{sale.device_id or "Unclaimed"}</code></p>
+        <p><small>Email copy:</small><br/><b>{sale.email if sale.email else "(none)"}</b></p>
+      </div>
+
+      <div class="actions" style="margin-top: 24px;">
+        <a class="btn-secondary" href="/v">Back to Vault</a>
+      </div>
+    </section>
     """
+    return render_page(f"Receipt #{sale.id}", body)
 
 
 # -----------------------------
