@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import resend
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
@@ -222,6 +222,7 @@ class ReceiptIn(BaseModel):
     items: List[ReceiptItemIn] = []
 
 class ReceiptIngestPayload(BaseModel):
+    idempotency_key: Optional[str] = None
     terminal_id: str
     source_file: str
     captured_at_utc: str
@@ -262,8 +263,6 @@ def _utcnow() -> str:
 
 
 def _public_base_url() -> str:
-    # Use env var if you want (recommended on Render),
-    # otherwise default to your custom domain.
     return (os.getenv("PUBLIC_BASE_URL") or "https://rcpt.digital").rstrip("/")
 
 
@@ -315,7 +314,8 @@ def init_db():
                     claimed_at TEXT,
                     claimed_by_device_id TEXT,
                     email TEXT,
-                    items_json TEXT
+                    items_json TEXT,
+                    idempotency_key TEXT
                 )
                 """
             )
@@ -358,7 +358,8 @@ def migrate_db():
                     claimed_at TEXT,
                     claimed_by_device_id TEXT,
                     email TEXT,
-                    items_json TEXT
+                    items_json TEXT,
+                    idempotency_key TEXT
                 )
                 """
             )
@@ -385,6 +386,15 @@ def migrate_db():
             conn.execute(text("ALTER TABLE receipts ADD COLUMN email TEXT"))
         if not _has_column(conn, "receipts", "items_json"):
             conn.execute(text("ALTER TABLE receipts ADD COLUMN items_json TEXT"))
+        if not _has_column(conn, "receipts", "idempotency_key"):
+            conn.execute(text("ALTER TABLE receipts ADD COLUMN idempotency_key TEXT"))
+
+        # Create unique index for safe deduplication (partial index ignores NULLs)
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_receipts_idempotency_key 
+            ON receipts(idempotency_key) 
+            WHERE idempotency_key IS NOT NULL
+        """))
 
         # Backfill defaults for older rows
         conn.execute(text("UPDATE receipts SET status='DRAFT' WHERE status IS NULL"))
@@ -449,9 +459,12 @@ def home():
 # Bridge Ingestion API
 # -----------------------------
 @app.post("/api/receipts/ingest")
-def ingest_receipt(payload: ReceiptIngestPayload):
+def ingest_receipt(payload: ReceiptIngestPayload, request: Request):
     now = _utcnow()
     
+    # 1. Resolve Idempotency Key (prefer JSON payload, fallback to Header)
+    idem_key = payload.idempotency_key or request.headers.get("X-Idempotency-Key")
+
     # Safely handle null total and convert exactly to cents
     total_val = payload.receipt.total or 0.0
     total_cents = int(round(total_val * 100))
@@ -459,7 +472,7 @@ def ingest_receipt(payload: ReceiptIngestPayload):
     # Fallback to terminal_id if heuristic extraction missed the merchant name
     merchant_id = payload.receipt.merchant or payload.terminal_id
     
-    # Dump the full structured object to items_json, plus metadata for dedupe
+    # Dump the full structured object to items_json, plus metadata
     receipt_dict = payload.receipt.dict()
     receipt_dict["_meta"] = {
         "source_file": payload.source_file,
@@ -468,56 +481,89 @@ def ingest_receipt(payload: ReceiptIngestPayload):
     items_json_str = json.dumps(receipt_dict)
 
     with engine.begin() as conn:
-        # Lightweight deduplication guard: prevents the same bridge file from creating double records
-        dedupe_query = text("""
-            SELECT id FROM receipts 
-            WHERE terminal_id = :t 
-              AND items_json LIKE :s 
-            LIMIT 1
-        """)
-        existing = conn.execute(dedupe_query, {
-            "t": payload.terminal_id, 
-            "s": f'%"{payload.source_file}"%'
-        }).fetchone()
-        
-        if existing:
-            return {
-                "ok": True, 
-                "receipt_id": existing.id, 
-                "terminal_id": payload.terminal_id,
-                "note": "duplicate skipped"
-            }
+        # 2. Deduplication check
+        if idem_key:
+            existing = conn.execute(
+                text("SELECT id FROM receipts WHERE idempotency_key = :k LIMIT 1"),
+                {"k": idem_key}
+            ).fetchone()
+            if existing:
+                return {
+                    "ok": True, 
+                    "receipt_id": existing.id, 
+                    "terminal_id": payload.terminal_id,
+                    "note": "duplicate skipped via idempotency key"
+                }
+        else:
+            # Fallback legacy dedupe if bridge is outdated
+            dedupe_query = text("""
+                SELECT id FROM receipts 
+                WHERE terminal_id = :t 
+                  AND items_json LIKE :s 
+                LIMIT 1
+            """)
+            existing = conn.execute(dedupe_query, {
+                "t": payload.terminal_id, 
+                "s": f'%"{payload.source_file}"%'
+            }).fetchone()
+            
+            if existing:
+                return {
+                    "ok": True, 
+                    "receipt_id": existing.id, 
+                    "terminal_id": payload.terminal_id,
+                    "note": "duplicate skipped via source_file fallback"
+                }
 
-        # Insert as an unclaimed PAID receipt waiting for the customer to tap
-        insert_query = text("""
-            INSERT INTO receipts (
-                terminal_id,
-                merchant_id,
-                total_cents,
-                currency,
-                status,
-                created_at,
-                updated_at,
-                paid_at,
-                claimed_at,
-                claimed_by_device_id,
-                email,
-                items_json
-            )
-            VALUES (
-                :terminal, :m, :t, 'PKR', 'PAID', :now, :now, :now, NULL, NULL, NULL, :items
-            )
-        """)
-        
-        result = conn.execute(insert_query, {
-            "terminal": payload.terminal_id,
-            "m": merchant_id,
-            "t": total_cents,
-            "now": now,
-            "items": items_json_str
-        })
-        receipt_id = result.lastrowid
-        
+        # 3. Safe Insert
+        try:
+            insert_query = text("""
+                INSERT INTO receipts (
+                    terminal_id,
+                    merchant_id,
+                    total_cents,
+                    currency,
+                    status,
+                    created_at,
+                    updated_at,
+                    paid_at,
+                    claimed_at,
+                    claimed_by_device_id,
+                    email,
+                    items_json,
+                    idempotency_key
+                )
+                VALUES (
+                    :terminal, :m, :t, 'PKR', 'PAID', :now, :now, :now, NULL, NULL, NULL, :items, :idem_key
+                )
+            """)
+            
+            result = conn.execute(insert_query, {
+                "terminal": payload.terminal_id,
+                "m": merchant_id,
+                "t": total_cents,
+                "now": now,
+                "items": items_json_str,
+                "idem_key": idem_key
+            })
+            receipt_id = result.lastrowid
+            
+        except Exception as e:
+            # Handle deep race condition on the DB UNIQUE index
+            if idem_key and "UNIQUE constraint" in str(e):
+                existing = conn.execute(
+                    text("SELECT id FROM receipts WHERE idempotency_key = :k LIMIT 1"),
+                    {"k": idem_key}
+                ).fetchone()
+                if existing:
+                    return {
+                        "ok": True, 
+                        "receipt_id": existing.id, 
+                        "terminal_id": payload.terminal_id,
+                        "note": "duplicate skipped via idempotency key (race condition)"
+                    }
+            raise e
+
     return {
         "ok": True,
         "receipt_id": receipt_id,
@@ -773,9 +819,10 @@ def pos_paid(merchant_id: str, total_pkr: int = Form(...)):
                     claimed_at,
                     claimed_by_device_id,
                     email,
-                    items_json
+                    items_json,
+                    idempotency_key
                 )
-                VALUES (:terminal, :m, :t, 'PKR', 'PAID', :now, :now, :now, NULL, NULL, NULL, NULL)
+                VALUES (:terminal, :m, :t, 'PKR', 'PAID', :now, :now, :now, NULL, NULL, NULL, NULL, NULL)
                 """
             ),
             {
