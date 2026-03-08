@@ -1,5 +1,20 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Local database
 rcpt.db
-.env
+
+# Dotnet build artifacts
+bin/
+obj/
+
+# VSCode
+.vscode/
+
+# OS junk
+.DS_Store
+Thumbs.db
