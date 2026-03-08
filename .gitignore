@@ -1,20 +1,28 @@
+# =========================
 # Python
+# =========================
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Local database
+# Local development DB
 rcpt.db
 
-# Dotnet build artifacts
+# =========================
+# .NET / C# build artifacts
+# =========================
 bin/
 obj/
 
-# VSCode
+# =========================
+# Editor / IDE
+# =========================
 .vscode/
 
+# =========================
 # OS junk
+# =========================
 .DS_Store
 Thumbs.db
