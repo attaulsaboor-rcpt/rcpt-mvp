@@ -1,9 +1,12 @@
 import os
+import json
 from datetime import datetime
+from typing import List, Optional
 
 import resend
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 
 app = FastAPI()
@@ -197,6 +200,32 @@ BASE_STYLE = """
   }
 </style>
 """
+
+# -----------------------------
+# Pydantic Models for Bridge Ingestion
+# -----------------------------
+class ReceiptItemIn(BaseModel):
+    name: str
+    qty: Optional[int] = None
+    unitPrice: Optional[float] = None
+    linePrice: Optional[float] = None
+
+class ReceiptIn(BaseModel):
+    merchant: Optional[str] = None
+    date: Optional[str] = None
+    cashier: Optional[str] = None
+    paymentMethod: Optional[str] = None
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    tax: Optional[float] = None
+    total: Optional[float] = None
+    items: List[ReceiptItemIn] = []
+
+class ReceiptIngestPayload(BaseModel):
+    terminal_id: str
+    source_file: str
+    captured_at_utc: str
+    receipt: ReceiptIn
 
 
 def status_pill(status: str) -> str:
@@ -414,6 +443,86 @@ def home():
     </section>
     """
     return render_page("RCPT", body)
+
+
+# -----------------------------
+# Bridge Ingestion API
+# -----------------------------
+@app.post("/api/receipts/ingest")
+def ingest_receipt(payload: ReceiptIngestPayload):
+    now = _utcnow()
+    
+    # Safely handle null total and convert exactly to cents
+    total_val = payload.receipt.total or 0.0
+    total_cents = int(round(total_val * 100))
+    
+    # Fallback to terminal_id if heuristic extraction missed the merchant name
+    merchant_id = payload.receipt.merchant or payload.terminal_id
+    
+    # Dump the full structured object to items_json, plus metadata for dedupe
+    receipt_dict = payload.receipt.dict()
+    receipt_dict["_meta"] = {
+        "source_file": payload.source_file,
+        "captured_at_utc": payload.captured_at_utc
+    }
+    items_json_str = json.dumps(receipt_dict)
+
+    with engine.begin() as conn:
+        # Lightweight deduplication guard: prevents the same bridge file from creating double records
+        dedupe_query = text("""
+            SELECT id FROM receipts 
+            WHERE terminal_id = :t 
+              AND items_json LIKE :s 
+            LIMIT 1
+        """)
+        existing = conn.execute(dedupe_query, {
+            "t": payload.terminal_id, 
+            "s": f'%"{payload.source_file}"%'
+        }).fetchone()
+        
+        if existing:
+            return {
+                "ok": True, 
+                "receipt_id": existing.id, 
+                "terminal_id": payload.terminal_id,
+                "note": "duplicate skipped"
+            }
+
+        # Insert as an unclaimed PAID receipt waiting for the customer to tap
+        insert_query = text("""
+            INSERT INTO receipts (
+                terminal_id,
+                merchant_id,
+                total_cents,
+                currency,
+                status,
+                created_at,
+                updated_at,
+                paid_at,
+                claimed_at,
+                claimed_by_device_id,
+                email,
+                items_json
+            )
+            VALUES (
+                :terminal, :m, :t, 'PKR', 'PAID', :now, :now, :now, NULL, NULL, NULL, :items
+            )
+        """)
+        
+        result = conn.execute(insert_query, {
+            "terminal": payload.terminal_id,
+            "m": merchant_id,
+            "t": total_cents,
+            "now": now,
+            "items": items_json_str
+        })
+        receipt_id = result.lastrowid
+        
+    return {
+        "ok": True,
+        "receipt_id": receipt_id,
+        "terminal_id": payload.terminal_id
+    }
 
 
 # -----------------------------
