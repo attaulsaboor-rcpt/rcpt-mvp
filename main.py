@@ -5,11 +5,34 @@ from typing import List, Optional
 
 import resend
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 
 app = FastAPI()
+
+# -----------------------------
+# CORS Configuration
+# -----------------------------
+# Parse extra origins from an environment variable (e.g., "https://my-replit-app.dev,https://another.vercel.app")
+env_origins = os.getenv("RCPT_CORS_ORIGINS", "")
+extra_origins = [o.strip() for o in env_origins.split(",")] if env_origins else []
+
+allowed_origins = [
+    "https://rcpt.digital",
+    "https://www.rcpt.digital",
+    "http://localhost:5173",  # Vite default
+    "http://localhost:3000",  # React default
+] + extra_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=False,  # Set to False as we do not use cookies for MVP auth
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # SQLite DB in project folder
 engine = create_engine("sqlite:///rcpt.db", connect_args={"check_same_thread": False})
@@ -202,7 +225,7 @@ BASE_STYLE = """
 """
 
 # -----------------------------
-# Pydantic Models for Bridge Ingestion
+# Pydantic Models for Bridge Ingestion & JSON API
 # -----------------------------
 class ReceiptItemIn(BaseModel):
     name: str
@@ -227,6 +250,20 @@ class ReceiptIngestPayload(BaseModel):
     source_file: str
     captured_at_utc: str
     receipt: ReceiptIn
+
+# Note: For this MVP architecture, we assume terminal_id is globally unique across all merchants.
+# In the future, this could be combined (e.g. "merch123_reg1") or passed as separate fields.
+class ClaimPayload(BaseModel):
+    device_id: str
+    terminal_id: str
+    email: Optional[str] = None
+
+class ClaimResponse(BaseModel):
+    success: bool
+    receipt_id: int
+    device_id: str
+    terminal_id: str
+    message: str
 
 
 def status_pill(status: str) -> str:
@@ -407,7 +444,7 @@ init_db()
 migrate_db()
 
 
-def send_receipt_email(to_email: str, merchant_id: str, total_pkr: int, receipt_id: int):
+def send_receipt_email(to_email: str, merchant_id: str, total_pkr: float, receipt_id: int):
     api_key = os.getenv("RESEND_API_KEY")
     if not api_key:
         raise RuntimeError("RESEND_API_KEY is not set")
@@ -421,7 +458,7 @@ def send_receipt_email(to_email: str, merchant_id: str, total_pkr: int, receipt_
     <div style="font-family: Arial, sans-serif; line-height: 1.4;">
       <h2>RCPT Receipt</h2>
       <p><b>Merchant:</b> {merchant_id}</p>
-      <p><b>Total:</b> {total_pkr} PKR</p>
+      <p><b>Total:</b> {total_pkr:.2f} PKR</p>
       <p><b>Receipt ID:</b> {receipt_id}</p>
       <p><b>View:</b> <a href="{receipt_url}">{receipt_url}</a></p>
       <hr />
@@ -456,7 +493,7 @@ def home():
 
 
 # -----------------------------
-# Bridge Ingestion API
+# JSON API: Bridge Ingestion
 # -----------------------------
 @app.post("/api/receipts/ingest")
 def ingest_receipt(payload: ReceiptIngestPayload, request: Request):
@@ -569,6 +606,99 @@ def ingest_receipt(payload: ReceiptIngestPayload, request: Request):
         "receipt_id": receipt_id,
         "terminal_id": payload.terminal_id
     }
+
+
+# -----------------------------
+# JSON API: App Claim Flow
+# -----------------------------
+@app.post("/api/claim", response_model=ClaimResponse)
+def api_claim_receipt(payload: ClaimPayload):
+    # Route-level validation ensures foolproof handling regardless of Pydantic version parsing
+    device_id = payload.device_id.strip() if payload.device_id else ""
+    terminal_id = payload.terminal_id.strip() if payload.terminal_id else ""
+    
+    # 400 Bad Request: Provided keys, but they were empty or whitespace
+    if not device_id or not terminal_id:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "message": "Missing or invalid device_id or terminal_id"}
+        )
+
+    now = _utcnow()
+
+    with engine.begin() as conn:
+        # Find latest PAID but unclaimed receipt for that specific terminal
+        receipt = conn.execute(
+            text(
+                """
+                SELECT id, merchant_id, total_cents
+                FROM receipts
+                WHERE terminal_id = :t
+                  AND status = 'PAID'
+                  AND claimed_at IS NULL
+                ORDER BY COALESCE(paid_at, created_at) DESC, id DESC
+                LIMIT 1
+                """
+            ),
+            {"t": terminal_id},
+        ).fetchone()
+
+        # 404 Not Found: Terminal exists/valid, but has no pending receipt
+        if not receipt:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "message": "No unclaimed receipt found for this terminal"}
+            )
+
+        email_clean = payload.email.strip() if payload.email else ""
+
+        # Atomic claim: ensures no race conditions when multiple devices tap at once
+        updated = conn.execute(
+            text(
+                """
+                UPDATE receipts
+                SET status = 'CLAIMED',
+                    claimed_at = :now,
+                    claimed_by_device_id = :d,
+                    email = CASE
+                        WHEN :e <> '' THEN :e
+                        ELSE email
+                    END,
+                    updated_at = :now
+                WHERE id = :id
+                  AND status = 'PAID'
+                  AND claimed_at IS NULL
+                """
+            ),
+            {"now": now, "d": device_id, "e": email_clean, "id": receipt.id},
+        )
+
+        # 409 Conflict: Receipt existed a millisecond ago, but another user claimed it first
+        if updated.rowcount != 1:
+            return JSONResponse(
+                status_code=409,
+                content={"success": False, "message": "Receipt was already claimed by another user. Please try again."}
+            )
+
+    # Non-blocking optional email trigger
+    if email_clean:
+        try:
+            send_receipt_email(
+                to_email=email_clean,
+                merchant_id=receipt.merchant_id or terminal_id,
+                total_pkr=(receipt.total_cents / 100.0),
+                receipt_id=receipt.id,
+            )
+        except Exception:
+            pass
+
+    return ClaimResponse(
+        success=True,
+        receipt_id=receipt.id,
+        device_id=device_id,
+        terminal_id=terminal_id,
+        message="Receipt claimed successfully"
+    )
 
 
 # -----------------------------
@@ -752,7 +882,7 @@ def terminal_claim_latest_receipt(
             send_receipt_email(
                 to_email=email.strip(),
                 merchant_id=receipt.merchant_id or terminal_id,
-                total_pkr=(receipt.total_cents // 100),
+                total_pkr=(receipt.total_cents / 100.0),
                 receipt_id=receipt.id,
             )
             email_status = "<p>✅ Email sent</p>"
@@ -1170,7 +1300,7 @@ def vault_api(device_id: str):
             {
                 "id": r.id,
                 "merchant_id": r.merchant_id,
-                "total_pkr": r.total_cents // 100,
+                "total_pkr": r.total_cents / 100.0,
                 "when": when,
                 "source": source,
             }
