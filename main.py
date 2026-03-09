@@ -1,10 +1,10 @@
 import os
 import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 import resend
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -252,7 +252,6 @@ class ReceiptIngestPayload(BaseModel):
     receipt: ReceiptIn
 
 # Note: For this MVP architecture, we assume terminal_id is globally unique across all merchants.
-# In the future, this could be combined (e.g. "merch123_reg1") or passed as separate fields.
 class ClaimPayload(BaseModel):
     device_id: str
     terminal_id: str
@@ -264,6 +263,34 @@ class ClaimResponse(BaseModel):
     device_id: str
     terminal_id: str
     message: str
+
+# Models for the rich JSON detail endpoint
+class ReceiptItemOut(BaseModel):
+    name: str
+    qty: Optional[int] = None
+    unitPrice: Optional[float] = None
+    linePrice: Optional[float] = None
+
+class ReceiptDetailResponse(BaseModel):
+    id: int
+    terminal_id: Optional[str] = None
+    merchant_id: Optional[str] = None
+    currency: str = "PKR"
+    status: str
+    created_at: str
+    paid_at: Optional[str] = None
+    claimed_at: Optional[str] = None
+    claimed_by_device_id: Optional[str] = None
+    email: Optional[str] = None
+    date: Optional[str] = None
+    cashier: Optional[str] = None
+    paymentMethod: Optional[str] = None
+    subtotal: Optional[float] = None
+    discount: Optional[float] = None
+    tax: Optional[float] = None
+    total: float
+    items: List[ReceiptItemOut] = []
+    is_legacy: bool = False
 
 
 def status_pill(status: str) -> str:
@@ -699,6 +726,91 @@ def api_claim_receipt(payload: ClaimPayload):
         terminal_id=terminal_id,
         message="Receipt claimed successfully"
     )
+
+
+# -----------------------------
+# JSON API: Rich Receipt Detail
+# -----------------------------
+@app.get("/api/receipts/{receipt_id}", response_model=ReceiptDetailResponse)
+def get_receipt_detail(receipt_id: int):
+    with engine.begin() as conn:
+        receipt = conn.execute(
+            text(
+                """
+                SELECT id, terminal_id, merchant_id, total_cents, currency, status, created_at,
+                       updated_at, paid_at, claimed_at, claimed_by_device_id, email, items_json
+                FROM receipts
+                WHERE id = :id
+                """
+            ),
+            {"id": receipt_id},
+        ).fetchone()
+
+        if receipt:
+            rich_data = {}
+            if receipt.items_json:
+                try:
+                    rich_data = json.loads(receipt.items_json)
+                except Exception:
+                    pass
+
+            db_total = receipt.total_cents / 100.0
+            json_total = rich_data.get("total")
+            
+            # Prefer the JSON parsed total if present, fallback to DB total
+            final_total = float(json_total) if json_total is not None else db_total
+
+            return ReceiptDetailResponse(
+                id=receipt.id,
+                terminal_id=receipt.terminal_id,
+                merchant_id=receipt.merchant_id or receipt.terminal_id or "unknown",
+                currency=receipt.currency or "PKR",
+                status=receipt.status or "DRAFT",
+                created_at=receipt.created_at,
+                paid_at=receipt.paid_at,
+                claimed_at=receipt.claimed_at,
+                claimed_by_device_id=receipt.claimed_by_device_id,
+                email=receipt.email,
+                date=rich_data.get("date"),
+                cashier=rich_data.get("cashier"),
+                paymentMethod=rich_data.get("paymentMethod"),
+                subtotal=rich_data.get("subtotal"),
+                discount=rich_data.get("discount"),
+                tax=rich_data.get("tax"),
+                total=final_total,
+                items=rich_data.get("items", []),
+                is_legacy=False
+            )
+
+        # Legacy fallback if not in receipts table
+        sale = conn.execute(
+            text(
+                """
+                SELECT id, merchant_id, email, device_id, total_cents, status, created_at
+                FROM sales
+                WHERE id = :id
+                """
+            ),
+            {"id": receipt_id},
+        ).fetchone()
+
+        if sale:
+            return ReceiptDetailResponse(
+                id=sale.id,
+                terminal_id="legacy",
+                merchant_id=sale.merchant_id,
+                currency="PKR",
+                status=sale.status or "PAID",
+                created_at=sale.created_at,
+                paid_at=sale.created_at, # Approximate legacy behavior
+                claimed_at=sale.created_at,
+                claimed_by_device_id=sale.device_id,
+                email=sale.email,
+                total=sale.total_cents / 100.0,
+                is_legacy=True
+            )
+
+    raise HTTPException(status_code=404, detail="Receipt not found")
 
 
 # -----------------------------
